@@ -3,7 +3,6 @@
  */
 
 
-var imageData = [];
 var fontData = [];
 var fontFamily = [];
 var imageIndex = {};
@@ -16,147 +15,18 @@ var gwd = null;
 
 var watchFaceXml = '';
 
-function processZipFile(f) {
-    // Closure to capture the file information.
-    reader.onload = (function(theFile) {
-        return function(e) {
-            try {
-                var zip = new JSZip(e.target.result);
-                extract(zip);
-            } catch(e) {
-                $fileContent = $("<div>", {
-                    "class" : "alert alert-danger",
-                    text : "Error reading " + theFile.name + " : " + e.message
-                });
-            }
-            if (nested==true){
-                setTimeout(processNested, 10);
-            } else {
-                setTimeout(gearWatch.doRenderWatch, 10);
-            }
-        }
-    })(f);
-    reader.readAsArrayBuffer(f);
-}
-
-function hhh(){
-    //getRemoteFile('https://dl.dropboxusercontent.com/content_link/nq30G4I3jvzRtccEd6JC5ErCmMU3rb0PTW4BAHPgJvSASfIXJ8YE0usAG0chTV10/file?dl=1');
-    getRemoteFile('http://www.thesauerreport.com/gwdtest.zip');
-}
-
-function hhh2(){
-    //getRemoteFile('https://dl.dropboxusercontent.com/content_link/nq30G4I3jvzRtccEd6JC5ErCmMU3rb0PTW4BAHPgJvSASfIXJ8YE0usAG0chTV10/file?dl=1');
-    getRemoteFile('http://www.thesauerreport.com/B50.zip');
-}
-
-function getRemoteFile(url) {
-    var oReq = new XMLHttpRequest();
-
-    oReq.onload = function(e) {
-        arraybuffer = oReq.response; // not responseText
-        console.log('received');
-        zip = new JSZip(arraybuffer);
-        console.log('start extract');
-        extract(zip);
-        if (nested==true){
-            setTimeout(processNested, 10);
-        } else {
-            console.log('start rendering watchface');
-            setTimeout(gearWatch.doRenderWatch, 10);
-        }
-    }
-    oReq.open("GET", url);
-    oReq.responseType = "arraybuffer";
-    oReq.send();
-}
-
-
-function processNested() {
-    console.log('start extracting nested file');
-    nested = false;
-    var zip = new JSZip(gwd);
-    extract(zip);
-    console.log('start rendering watchface');
-    setTimeout(gearWatch.doRenderWatch, 10);
-}
-
-function extract(zip) {
-    console.log('extracting...');
-    $.each(zip.files, function (index, zipEntry) {
-        var name = zipEntry.name;
-        //console.log('processsing '+name);
-        if (name.substr(name.length - 4) == '.gwd') {
-            console.log('nested zip detected');
-            gwd = zipEntry.asArrayBuffer();
-            nested = true;
-        }
-        if (name.substr(0, 4)== 'res/') { // we came to the right place
-            name = name.substr(4);
-            if (name=='watchface.xml') {    //found the watch design
-                watchFaceXml = zipEntry.asText();
-                //if (debugOutput) {
-                //    $("#xmlDebug").html('<H1>XML:</H1>'+htmlEntities(watchFaceXml));
-                //}
-            }
-
-            if (name.substr(0, 6)== 'fonts/' && name.length > 6) { // found a font
-                var fontdta = zipEntry.asUint8Array();
-                var fontFam = gearWatch.getFontInfo(fontdta);
-                var dataIndex = fontData.length;
-                var b64string = StringView.bytesToBase64(fontdta);
-                fontData.push("data:application/x-font-ttf;base64," + b64string);
-                fontFamily.push(fontFam);
-                fontIndex[name] = dataIndex;
-            }
-            if (name.substr(name.length - 4) == '.png') {
-                var imgdta = zipEntry.asUint8Array();
-                var dataIndex = imageData.length;
-                var b64string = StringView.bytesToBase64(imgdta);
-                imageData.push("data:image/png;base64," + b64string);
-                imageIndex[name] = dataIndex;
-               // console.log(name);
-            }
-            if (name.substr(name.length - 4) == '.jpg') {
-                var imgdta = zipEntry.asUint8Array();
-                var dataIndex = imageData.length;
-                var b64string = StringView.bytesToBase64(imgdta);
-                imageData.push("data:image/jpg;base64," + b64string);
-                imageIndex[name] = dataIndex;
-            }
-        }
-    });
-}
 
 (function( gearWatch, $, undefined ) {
-    ////Private Property
-    //var isHot = true;
-    //
-    ////Public Property
-    //gearWatch.ingredient = "Bacon Strips";
-    //
-    ////Public Method
-    //gearWatch.fry = function() {
-    //    var oliveOil;
-    //
-    //    addItem( "\t\n Butter \n\t" );
-    //    addItem( oliveOil );
-    //    console.log( "Frying " + gearWatch.ingredient );
-    //};
-    //
-    ////Private Method
-    //function addItem( item ) {
-    //    if ( item !== undefined ) {
-    //        console.log( "Adding " + $.trim(item) );
-    //    }
-    //}
 
     var xmlText = null;
     var parser = new DOMParser();
     var dynamicElements = [];
     var customFontCount = 0;
-    var debugOutput = false;
+    var debugOutput = gearWatchDesignerSettings.debug;
+    var timer = null;
+    var icuFormatter = null;
 
-
+    gearWatch.imageData = [];
 
     gearWatch.doRenderWatch = function() {
         gwd = null;
@@ -188,44 +58,22 @@ function extract(zip) {
                     }
                 }
             }
-            setInterval(renderAll, 20);
+            gearWatch.startTimer();
         }
 
         return mainDomElement;
     };
 
-    gearWatch.getFontInfo = function(fdata) {
-        //console.log(fdata);
-        var fontData = [];
-        var numberOfTables = 256*fdata[4] + fdata[5];
-        for (var tables=0; tables<numberOfTables; tables++) {
-            var offset = (16 * tables) + 12;
-            var tableName = String.fromCharCode(fdata[offset])+String.fromCharCode(fdata[offset+1])+String.fromCharCode(fdata[offset+2])+String.fromCharCode(fdata[offset+3]);
-            if (tableName == 'name') {
-                var ntOffset = 256*256*256*fdata[offset+8] + 256*256*fdata[offset+9] + 256*fdata[offset+10] + fdata[offset+11];
-                var numberOfNameRecords = 256 * fdata[ntOffset+2] + fdata[ntOffset+3];
-                var offsetStorageDec = 256 * fdata[ntOffset+4] + fdata[ntOffset+5];
-                var nameOffset = ntOffset + offsetStorageDec;
-                for (var nr=0; nr<numberOfNameRecords; nr++) {
-                    var idOffset = ntOffset + (nr * 12) + 6;
-                    var nameId = 256 * fdata[idOffset + 6] + fdata[idOffset + 7];
-                    var stringLength = 256 * fdata[idOffset + 8] + fdata[idOffset + 9];
-                    var stringOffset = 256 * fdata[idOffset + 10] + fdata[idOffset + 11];
-                    if (nameId == 1) {
-                        var name = '';
-                        for (var charCount = 0; charCount < stringLength; charCount++) {
-                            var address = nameOffset + stringOffset + charCount;
-                            if (fdata[address] > 0) {
-                                name = name + String.fromCharCode(fdata[address]);
-                            }
-                        }
-                        return name;
-                    }
-                }
-            }
-        }
-        return 'arial';
+    gearWatch.startTimer = function() {
+        var intervalTime = 500 / gearWatchDesignerSettings.framesPerSecond;
+        timer = setInterval(renderAll, intervalTime);
     };
+
+    gearWatch.stopTimer = function() {
+        clearInterval(timer);
+    };
+
+
 
     function createDomPart(part) {
         var partType = part.getAttribute('type');
@@ -370,39 +218,21 @@ function extract(zip) {
         var font = getFontNode(part);
         if (font) {
             var fontName  = font.getAttribute('filename');
-            //console.log(fontName);
             var fontIdx = getFontIndex('fonts/'+fontName+'.ttf');
             domElement.style.fontFamily = fontFamily[fontIdx];
             domElement.style.fontSize = font.getAttribute('size');
             customFontCount++;
             return true;
+        } else {
+            domElement.style.fontFamily = 'TizenSans';
+            domElement.style.fontSize = '24px';
+
         }
 
         return false;
     }
 
-    function getTextNode(part) {
-        return getNodeByName(part, 'text');
-    }
 
-    function getFontNode(part) {
-        return getNodeByName(part, 'font');
-    }
-
-    function getColorNode(part) {
-        return getNodeByName(part, 'color');
-    }
-
-    function getNodeByName(part, nodeName) {
-        var node = part.getElementsByTagName(nodeName);
-
-        return (node.length>0) ? node[0] : null;
-    }
-
-    function getImageUrl(part) {
-        var imageNode = part.getElementsByTagName("image")[0];
-        return imageNode.textContent;
-    }
 
     var currentGroupId = '';
 
@@ -420,73 +250,7 @@ function extract(zip) {
         return groupDomElement;
     }
 
-    function renderAll() {
-        for (toUpdate = 0; toUpdate<dynamicElements.length; toUpdate++) {
-            elementToRender = dynamicElements[toUpdate];
-            switch (elementToRender.type) {
-                case 'hand': renderHand(elementToRender);   break;
-                case 'text': renderText(elementToRender);   break;
-            }
 
-        }
-    }
-
-    function createRender(metaType, data, obId) {
-        var ob = null;
-        switch (metaType) {
-            case 'hands':           ob = new Hands(data, obId);         break;
-            case 'digitalclock':    ob = new DynamicText(data, obId);   break;
-            case 'background':
-            case 'static':
-            default:
-
-        }
-
-        return ob;
-    }
-
-    function DynamicText(data, obId) {
-        this.type = 'text';
-        this.dataSource = 'icu';
-        this.dataFormatter = cldrMachine.dateFormatter({ raw: data.childNodes[0].nodeValue});
-        this.objectId = obId;
-    }
-
-    function Hands(data, obId) {
-        var rotations = part.getElementsByTagName('rotation');
-        var rotation = rotations[0];
-        var angleEnd = Number(rotation.getAttribute('end_angle'));
-        var angleStart = Number(rotation.getAttribute('start_angle'));
-        var valueStart = Number(rotation.getAttribute('start_value'));
-        var valueEnd = Number(rotation.getAttribute('end_value'));
-        var smoothSeconds = rotation.getAttribute('animation');
-        var angleRange = angleEnd-angleStart;
-        var valueRange = valueEnd-valueStart;
-        this.type = 'hand';
-        this.objectId =  obId;//or currentGroupId;//
-        this.dataSource = rotation.getAttribute('source');
-        this.valueOffset = valueStart;
-        this.angleOffset = angleStart;
-        this.degreesPerValueUnit = angleRange/valueRange;
-        this.smooth = false;//(smoothSeconds == 'sweep60s');
-    }
-
-    function renderHand(that) {
-        var value = valueFromSource(that.dataSource)-that.valueOffset;
-        var angle = (that.degreesPerValueUnit * value)+that.angleOffset;
-        var renderElement = document.getElementById(that.objectId);
-        if (renderElement) {
-            renderElement.style.transform = 'rotate('+angle+'deg)';
-        }
-    }
-
-    function renderText(that) {
-        var value = valueFromSource(that.dataSource, that.dataFormatter);
-        var renderElement = document.getElementById(that.objectId);
-        if (renderElement) {
-            renderElement.innerHTML = value;
-        }
-    }
 
 
     // todo move to desktop.js
@@ -518,9 +282,135 @@ function extract(zip) {
         }
     }
 
-    function getIcuValue(icuFormatString) {
-        var  d = new Date();
-        return d.getSeconds();
+    /*****************************************************************/
+    /**                 RENDER
+     *****************************************************************/
+
+    function renderAll() {
+        for (toUpdate = 0; toUpdate<dynamicElements.length; toUpdate++) {
+            elementToRender = dynamicElements[toUpdate];
+            switch (elementToRender.type) {
+                case 'hand': renderHand(elementToRender);   break;
+                case 'text': renderText(elementToRender);   break;
+            }
+
+        }
+    }
+
+    function createRender(metaType, data, obId) {
+        var ob = null;
+        switch (metaType) {
+            case 'hands':           ob = new Hands(data, obId);         break;
+            case 'digitalclock':    ob = new DynamicText(data, obId);   break;
+            case 'background':
+            case 'static':
+            default:
+
+        }
+
+        return ob;
+    }
+
+    function renderHand(that) {
+        var value = valueFromSource(that.dataSource)-that.valueOffset;
+        var angle = (that.degreesPerValueUnit * value)+that.angleOffset;
+        var renderElement = document.getElementById(that.objectId);
+        if (renderElement) {
+            renderElement.style.transform = 'rotate('+angle+'deg)';
+        }
+    }
+
+    function renderText(that) {
+        var value = valueFromSource(that.dataSource, that.dataFormatter);
+        var renderElement = document.getElementById(that.objectId);
+        if (renderElement) {
+            renderElement.innerHTML = value;
+        }
+    }
+
+    function DynamicText(data, obId) {
+        this.type = 'text';
+        this.dataSource = 'icu';
+        this.dataFormatter = icuFormatter.dateFormatter({raw: data.childNodes[0].nodeValue});
+        this.objectId = obId;
+    }
+
+    function Hands(data, obId) {
+        var rotations = part.getElementsByTagName('rotation');
+        var rotation = rotations[0];
+        var angleEnd = Number(rotation.getAttribute('end_angle'));
+        var angleStart = Number(rotation.getAttribute('start_angle'));
+        var valueStart = Number(rotation.getAttribute('start_value'));
+        var valueEnd = Number(rotation.getAttribute('end_value'));
+        var smoothSeconds = rotation.getAttribute('animation');
+        var angleRange = angleEnd-angleStart;
+        var valueRange = valueEnd-valueStart;
+        this.type = 'hand';
+        this.objectId =  obId;//or currentGroupId;//
+        this.dataSource = rotation.getAttribute('source');
+        this.valueOffset = valueStart;
+        this.angleOffset = angleStart;
+        this.degreesPerValueUnit = angleRange/valueRange;
+        this.smooth = false;//(smoothSeconds == 'sweep60s');
+    }
+
+    /*****************************************************************/
+    /**                 DEBUG Helpers
+     *****************************************************************/
+
+    function htmlEntities(str) {
+        return String(str).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+
+    }
+
+    function hhh(){
+        //getRemoteFile('https://dl.dropboxusercontent.com/content_link/nq30G4I3jvzRtccEd6JC5ErCmMU3rb0PTW4BAHPgJvSASfIXJ8YE0usAG0chTV10/file?dl=1');
+        gearWatchDesignerSettings.getRemoteFile('http://www.thesauerreport.com/gwdtest.zip');
+    }
+
+    function hhh2(){
+        //getRemoteFile('https://dl.dropboxusercontent.com/content_link/nq30G4I3jvzRtccEd6JC5ErCmMU3rb0PTW4BAHPgJvSASfIXJ8YE0usAG0chTV10/file?dl=1');
+        gearWatchDesignerSettings.getRemoteFile('http://www.thesauerreport.com/B50.zip');
+    }
+
+    /*****************************************************************/
+    /**                 Private setters and getters
+     *****************************************************************/
+
+    function getTextNode(part) {
+        return getNodeByName(part, 'text');
+    }
+
+    function getFontNode(part) {
+        return getNodeByName(part, 'font');
+    }
+
+    function getColorNode(part) {
+        return getNodeByName(part, 'color');
+    }
+
+    function getNodeByName(part, nodeName) {
+        var node = part.getElementsByTagName(nodeName);
+
+        return (node.length>0) ? node[0] : null;
+    }
+
+    function getImageUrl(part) {
+        var imageNode = part.getElementsByTagName("image")[0];
+        return imageNode.textContent;
+    }
+
+    function getDataUri(name){
+        var index = imageIndex[name];
+        return gearWatch.imageData[index];
+    }
+
+    function getFontIndex(name) {
+        return fontIndex[name];
+    }
+
+    function getMainElementId(node) {
+        return (node.getAttribute('type') == 'ambient' ) ? 'watchAmbient' : 'watchActive';
     }
 
     function getPartMeta(part, attribute) {
@@ -539,23 +429,6 @@ function extract(zip) {
         return 'static';
     }
 
-    function getMainElementId(node) {
-        return (node.getAttribute('type') == 'ambient' ) ? 'watchAmbient' : 'watchActive';
-    }
-
-    function htmlEntities(str) {
-        return String(str).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
-    }
-
-    function getDataUri(name){
-        var index = imageIndex[name];
-        return imageData[index];
-    }
-
-    function getFontIndex(name) {
-        return fontIndex[name];
-    }
-
     /*****************************************************************/
     /**                 Public setters and getters
      *****************************************************************/
@@ -567,26 +440,41 @@ function extract(zip) {
         return watchFaceXml;
     };
 
+    gearWatch.setIcuFormatter = function(formatter) {
+        icuFormatter = formatter;
+    }
+
+    gearWatch.getFontInfo = function(fdata) {
+        //console.log(fdata);
+        var fontData = [];
+        var numberOfTables = 256*fdata[4] + fdata[5];
+        for (var tables=0; tables<numberOfTables; tables++) {
+            var offset = (16 * tables) + 12;
+            var tableName = String.fromCharCode(fdata[offset])+String.fromCharCode(fdata[offset+1])+String.fromCharCode(fdata[offset+2])+String.fromCharCode(fdata[offset+3]);
+            if (tableName == 'name') {
+                var ntOffset = 256*256*256*fdata[offset+8] + 256*256*fdata[offset+9] + 256*fdata[offset+10] + fdata[offset+11];
+                var numberOfNameRecords = 256 * fdata[ntOffset+2] + fdata[ntOffset+3];
+                var offsetStorageDec = 256 * fdata[ntOffset+4] + fdata[ntOffset+5];
+                var nameOffset = ntOffset + offsetStorageDec;
+                for (var nr=0; nr<numberOfNameRecords; nr++) {
+                    var idOffset = ntOffset + (nr * 12) + 6;
+                    var nameId = 256 * fdata[idOffset + 6] + fdata[idOffset + 7];
+                    var stringLength = 256 * fdata[idOffset + 8] + fdata[idOffset + 9];
+                    var stringOffset = 256 * fdata[idOffset + 10] + fdata[idOffset + 11];
+                    if (nameId == 1) {
+                        var name = '';
+                        for (var charCount = 0; charCount < stringLength; charCount++) {
+                            var address = nameOffset + stringOffset + charCount;
+                            if (fdata[address] > 0) {
+                                name = name + String.fromCharCode(fdata[address]);
+                            }
+                        }
+                        return name;
+                    }
+                }
+            }
+        }
+        return 'arial';
+    };
+
 }( window.gearWatch = window.gearWatch || {}, jQuery ));
-
-
-var cldrMachine = null;
-
-$.when(
-    $.get( "cldr/main/en/ca-gregorian.json" ),
-    $.get( "cldr/main/en/numbers.json"),
-    $.get( "cldr/main/en/timeZoneNames.json" ),
-    $.get( "cldr/supplemental/likelySubtags.json" ),
-    $.get( "cldr/supplemental/timeData.json" ),
-    $.get( "cldr/supplemental/numberingSystems.json" ),
-    $.get( "cldr/supplemental/weekData.json" )
-).then(function() {
-
-    // Normalize $.get results, we only need the JSON, not the request statuses.
-    return [].slice.apply( arguments, [ 0 ] ).map(function( result ) {
-        return result[ 0 ];
-    });
-
-}).then( Globalize.load ).then(function() {
-    cldrMachine = Globalize( "en" );
-});
