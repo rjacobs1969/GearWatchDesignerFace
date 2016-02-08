@@ -50,8 +50,8 @@ function touchOrClickEvent()
         loader.add("js/globalize/globalize/relative-time.js");
         loader.add("js/globalize/globalize/unit.js");
         loader.add("js/settings.js");
-        loader.add("js/GWDProjectFileReader.js");
         loader.add("js/xmlParser.js");
+        loader.add("js/GWDProjectFileReader.js");
         loader.add("js/init.js");
     };
 

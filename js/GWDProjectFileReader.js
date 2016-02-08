@@ -4,7 +4,7 @@
 
 (function( gearWatchDesignerProjectFileReader, $, undefined ) {
 
-    var debug = gearWatchDesignerSettings.debug;
+    var reader = new FileReader();
 
     gearWatchDesignerSettings.processZipFile = function(f) {
         // Closure to capture the file information.

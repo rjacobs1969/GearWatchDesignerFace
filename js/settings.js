@@ -7,6 +7,8 @@
     gearWatchDesignerSettings.debug = false;
     gearWatchDesignerSettings.language = "en";
     gearWatchDesignerSettings.framesPerSecond = 15;
+    gearWatchDesignerSettings.roundOverlay = false;
+    gearWatchDesignerSettings.canvasBackgroundColor = 'black';
 
     ////Private Property
     //var isHot = true;

@@ -9,7 +9,7 @@ var imageIndex = {};
 var fontIndex = {};
 
 
-var reader = new FileReader();
+
 var nested = false;
 var gwd = null;
 
@@ -176,26 +176,7 @@ var watchFaceXml = '';
         element.appendChild(textPartElement);
     }
 
-    function setText(textNode, textPartId, textPartType) {
-        var content = getNodeByName(textNode, 'icu-skeleton');
-        if (content!=null) {
-            setRenderObject(textPartType, content, textPartId);
-            return '';
-        }
 
-        return content;
-    }
-
-    function setColorFromPart(part, element) {
-        var color = getColorNode(part);
-        if (color!=null) {
-            var alfa = color.getAttribute('a') / 255;
-            var red = color.getAttribute('r');
-            var green = color.getAttribute('g');
-            var blue = color.getAttribute('b');
-            element.style.color = 'rgba(' + red + ', ' + green + ', ' + blue + ', ' + alfa + ')';
-        }
-    }
 
     function loadFonts() {
         var numberOfFonts = fontData.length;
@@ -295,6 +276,21 @@ var watchFaceXml = '';
             }
 
         }
+        animAll();
+        conditionAll();
+    }
+
+    var animTick = true;
+    function animAll() {
+        animTick = !animTick;
+        if (animTick) {
+            // todo : process animations
+        }
+    }
+
+    function conditionAll()
+    {
+        // todo check conditions
     }
 
     function createRender(metaType, data, obId) {
@@ -363,19 +359,30 @@ var watchFaceXml = '';
 
     }
 
-    function hhh(){
-        //getRemoteFile('https://dl.dropboxusercontent.com/content_link/nq30G4I3jvzRtccEd6JC5ErCmMU3rb0PTW4BAHPgJvSASfIXJ8YE0usAG0chTV10/file?dl=1');
-        gearWatchDesignerSettings.getRemoteFile('http://www.thesauerreport.com/gwdtest.zip');
-    }
-
-    function hhh2(){
-        //getRemoteFile('https://dl.dropboxusercontent.com/content_link/nq30G4I3jvzRtccEd6JC5ErCmMU3rb0PTW4BAHPgJvSASfIXJ8YE0usAG0chTV10/file?dl=1');
-        gearWatchDesignerSettings.getRemoteFile('http://www.thesauerreport.com/B50.zip');
-    }
-
     /*****************************************************************/
     /**                 Private setters and getters
      *****************************************************************/
+
+    function setText(textNode, textPartId, textPartType) {
+        var content = getNodeByName(textNode, 'icu-skeleton');
+        if (content!=null) {
+            setRenderObject(textPartType, content, textPartId);
+            return '';
+        }
+
+        return content;
+    }
+
+    function setColorFromPart(part, element) {
+        var color = getColorNode(part);
+        if (color!=null) {
+            var alfa = color.getAttribute('a') / 255;
+            var red = color.getAttribute('r');
+            var green = color.getAttribute('g');
+            var blue = color.getAttribute('b');
+            element.style.color = 'rgba(' + red + ', ' + green + ', ' + blue + ', ' + alfa + ')';
+        }
+    }
 
     function getTextNode(part) {
         return getNodeByName(part, 'text');
@@ -442,11 +449,10 @@ var watchFaceXml = '';
 
     gearWatch.setIcuFormatter = function(formatter) {
         icuFormatter = formatter;
-    }
+    };
 
     gearWatch.getFontInfo = function(fdata) {
         //console.log(fdata);
-        var fontData = [];
         var numberOfTables = 256*fdata[4] + fdata[5];
         for (var tables=0; tables<numberOfTables; tables++) {
             var offset = (16 * tables) + 12;
@@ -474,7 +480,17 @@ var watchFaceXml = '';
                 }
             }
         }
-        return 'arial';
+        return 'TizenSans';
     };
 
 }( window.gearWatch = window.gearWatch || {}, jQuery ));
+
+function hhh(){
+    //getRemoteFile('https://dl.dropboxusercontent.com/content_link/nq30G4I3jvzRtccEd6JC5ErCmMU3rb0PTW4BAHPgJvSASfIXJ8YE0usAG0chTV10/file?dl=1');
+    gearWatchDesignerSettings.getRemoteFile('http://www.thesauerreport.com/gwdtest.zip');
+}
+
+function hhh2(){
+    //getRemoteFile('https://dl.dropboxusercontent.com/content_link/nq30G4I3jvzRtccEd6JC5ErCmMU3rb0PTW4BAHPgJvSASfIXJ8YE0usAG0chTV10/file?dl=1');
+    gearWatchDesignerSettings.getRemoteFile('http://www.thesauerreport.com/B50.zip');
+}

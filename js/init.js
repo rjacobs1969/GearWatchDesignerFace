@@ -13,6 +13,7 @@
     });
 })();
 
+/** Multi language **/
 $.when(
     $.get( "cldr/main/"+gearWatchDesignerSettings.language+"/ca-gregorian.json" ),
     $.get( "cldr/main/"+gearWatchDesignerSettings.language+"/numbers.json"),
