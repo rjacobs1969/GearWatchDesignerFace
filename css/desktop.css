@@ -2,9 +2,13 @@
     font-family: 'BreezeSans-Regular_20150728';
     src: url("../fonts/BreezeSans-Regular_20150728.ttf");
 }
+@font-face {
+    font-family: 'TizenSans';
+    src: url("../fonts/TizenSansRegular.ttf");
+}
 
 body {
-    font-family: BreezeSans-Regular_20150728;
+    font-family: TizenSans;
     font-size: 8px;
 
 }
