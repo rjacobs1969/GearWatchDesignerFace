@@ -1,0 +1,14 @@
+#watchActive {
+    position: absolute;
+    left:     0px;
+    top:      0px;
+    width:  360px;
+    height: 360px;
+}
+#watchAmbient {
+    position: absolute;
+    left:     0px;
+    top:      0px;
+    width:  360px;
+    height: 360px;
+}

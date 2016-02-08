@@ -1,0 +1,56 @@
+@font-face {
+    font-family: 'BreezeSans-Regular_20150728';
+    src: url("../fonts/BreezeSans-Regular_20150728.ttf");
+}
+
+body {
+    font-family: BreezeSans-Regular_20150728;
+    font-size: 8px;
+
+}
+
+#file {
+    position: absolute;
+    top: 0;
+    left: 0;
+}
+
+#letsgo {
+    position: absolute;
+    top: 0;
+    left:33%;
+    visibility: hidden;
+}
+
+#debugConsole {
+    position: absolute;
+    top: 50px;
+    left: 0;
+    width: 33%;
+    height: 100%;
+}
+
+#xmlDebug {
+    position: absolute;
+    top: 50px;
+    left: 33%;
+    width: 33%;
+    height: 100%;
+}
+
+
+#watchActive {
+    position: absolute;
+    left:     10px;
+    top:      50px;
+    width:    360px;
+    height:   360px;
+}
+#watchAmbient {
+    visibility: visible;
+    position: absolute;
+    left:     400px;
+    top:      50px;
+    width:    360px;
+    height:   360px;
+}
