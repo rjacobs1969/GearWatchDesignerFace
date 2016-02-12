@@ -5,6 +5,7 @@
 (function( gearWatchDesignerProjectFileReader, $, undefined ) {
 
     var reader = new FileReader();
+    var nested = false;
 
     gearWatchDesignerSettings.processZipFile = function(f) {
         // Closure to capture the file information.
@@ -48,13 +49,13 @@
         oReq.open("GET", url);
         oReq.responseType = "arraybuffer";
         oReq.send();
-    }
+    };
 
 
     function processNested() {
         logIt('Start extracting nested file');
         nested = false;
-        var zip = new JSZip(gwd);
+        var zip = new JSZip(gearWatch.gwd);
         extract(zip);
         logIt('Start rendering watchface');
         setTimeout(gearWatch.doRenderWatch, 10);
@@ -64,17 +65,17 @@
         logIt('extracting...');
         $.each(zip.files, function (index, zipEntry) {
             var name = zipEntry.name;
-            //console.log('processsing '+name);
+            logIt('file: '+name);
             if (name.substr(name.length - 4) == '.gwd') {
-                console.log('nested zip detected');
-                gwd = zipEntry.asArrayBuffer();
+                gearWatch.gwd = zipEntry.asArrayBuffer();
                 nested = true;
+                logIt('GWD is packed inside zip');
             }
             if (name.substr(0, 4)== 'res/') { // we came to the right place
                 name = name.substr(4);
                 if (name=='watchface.xml') {    //found the watch design
-                    watchFaceXml = zipEntry.asText();
-                    console.log(watchFaceXml);
+                    gearWatch.watchFaceXml = zipEntry.asText();
+                    console.log(gearWatch.watchFaceXml);
                 }
                 var fileExtention = getFileExtention(name);
                 if (name.substr(0, 6)== 'fonts/' && name.length > 6 && name.substr(name.length - 1) != '/') { // found a font
@@ -85,9 +86,10 @@
                     if (fileExtention == '.png' || fileExtention == '.jpg') {
                         var dataIndex = gearWatch.bitmapFontsData.length;
                         var fontName = getBitmapFontNameFromFilePath(name);
+                        logIt('Bitmap font '+fontName);
                         gearWatch.bitmapFontsData.push("data:" + mime + ";base64," + b64string);
                         gearWatch.bitmapFontsIndex[name] = dataIndex;
-                        var dataIndex = gearWatch.bitmapFontsRenders.length;
+                        //var dataIndex = gearWatch.bitmapFontsRenders.length;
                         if (!gearWatch.bitmapFontsRenderIndex[fontName]) {
                             var fontRender = new gearWatch.fontRenderer(fontName);
                             var dataIndex = gearWatch.bitmapFontsRenders.length;
@@ -95,10 +97,10 @@
                             gearWatch.bitmapFontsRenderIndex[fontName] = dataIndex;
                         }
                     } else {
-                        var dataIndex = fontData.length;
-                        fontData.push("data:" + mime + ";base64," + b64string);
-                        fontFamily.push(fontFam);
-                        fontIndex[name] = dataIndex;
+                        var dataIndex = gearWatch.fontData.length;
+                        gearWatch.fontData.push("data:" + mime + ";base64," + b64string);
+                        gearWatch.fontFamily.push(fontFam);
+                        gearWatch.fontIndex[name] = dataIndex;
                     }
                 }
                 if (fileExtention == '.png' || fileExtention == '.jpg') {
@@ -108,7 +110,6 @@
                     var mime = mimeTypeByFileExt(fileExtention);
                     gearWatch.imageData.push("data:"+mime+";base64," + b64string);
                     gearWatch.imageIndex[name] = dataIndex;
-                    // console.log(name);
                 }
             }
         });

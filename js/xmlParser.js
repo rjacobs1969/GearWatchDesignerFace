@@ -3,45 +3,39 @@
  */
 
 
-var fontData = [];
-var fontFamily = [];
-//var imageIndex = {};
-var fontIndex = {};
-
-
-
-var nested = false;
-var gwd = null;
-
-var watchFaceXml = '';
-
-
 (function( gearWatch, $, undefined ) {
 
-    var xmlText = null;
     var parser = new DOMParser();
     var dynamicElements = [];
     var customFontCount = 0;
     var debugOutput = gearWatchDesignerSettings.debug;
     var timer = null;
     var icuFormatter = null;
+    var watchFace;
+    var watchFaceName;
+    var watchFaceWidth;
+    var watchFaceHeight;
 
+    gearWatch.fontData = [];
+    gearWatch.fontFamily = [];
+    gearWatch.fontIndex = {};
     gearWatch.bitmapFontsData = [];
     gearWatch.bitmapFontsIndex = {};
     gearWatch.bitmapFontsRenders = [];
     gearWatch.bitmapFontsRenderIndex = {};
     gearWatch.imageIndex = {};
     gearWatch.imageData = [];
+    gearWatch.gwd = null;
+    gearWatch.watchFaceXml = '';
 
     gearWatch.doRenderWatch = function() {
-        gwd = null;
+        gearWatch.gwd = null;
         loadFonts();
-        xmlText = watchFaceXml;
-        var xmlDoc = parser.parseFromString(xmlText,"text/xml");
-        var watchFace = xmlDoc.getElementsByTagName("watchface");
-        var watchFaceName = watchFace[0].getAttribute('name');
-        //var watchFaceWidth = watchFace[0].getAttribute('width');
-        //var watchFaceHeight = watchFace[0].getAttribute('height');
+        var xmlDoc = parser.parseFromString(gearWatch.watchFaceXml,"text/xml");
+        watchFace = xmlDoc.getElementsByTagName("watchface");
+        watchFaceName = watchFace[0].getAttribute('name');
+        watchFaceWidth = watchFace[0].getAttribute('width');
+        watchFaceHeight = watchFace[0].getAttribute('height');
 
         groups = xmlDoc.getElementsByTagName('groups');
         for (mainGroupNumber = 0; mainGroupNumber < groups.length; mainGroupNumber++) {
@@ -213,14 +207,14 @@ var watchFaceXml = '';
 
 
     function loadFonts() {
-        var numberOfFonts = fontData.length;
+        var numberOfFonts = gearWatch.fontData.length;
         for (var nr=0; nr<numberOfFonts; nr++) {
             var className = 'FONT_'+nr;
-            var fontFam = fontFamily[nr];
+            var fontFam = gearWatch.fontFamily[nr];
             $("head").prepend('<style type="text/css">' +
                 "@font-face {\n" +
                 "\tfont-family: \""+fontFam+"\";\n" +
-                "\tsrc: local('☺'), url('"+fontData[nr]+"') format('truetype');\n" +
+                "\tsrc: local('☺'), url('"+gearWatch.fontData[nr]+"') format('truetype');\n" +
                 "}\n" +
                 "\t."+className+" {\n" +
                 "\tfont-family: "+fontFam+" !important;\n" +
@@ -235,7 +229,7 @@ var watchFaceXml = '';
             var fontName  = font.getAttribute('filename');
             if (fontName) {
                 var fontIdx = getFontIndex('fonts/' + fontName + '.ttf');
-                domElement.style.fontFamily = fontFamily[fontIdx];
+                domElement.style.fontFamily = gearWatch.fontFamily[fontIdx];
                 domElement.style.fontSize = font.getAttribute('size');
                 customFontCount++;
                 domElement.setAttribute('data-fontType','ttf');
@@ -514,7 +508,7 @@ var watchFaceXml = '';
     }
 
     function getFontIndex(name) {
-        return fontIndex[name];
+        return gearWatch.fontIndex[name];
     }
 
     function getMainElementId(node) {
@@ -541,11 +535,11 @@ var watchFaceXml = '';
     /**                 Public setters and getters
      *****************************************************************/
     gearWatch.setWatchXml = function(x) {
-        watchFaceXml = x;
+        gearWatch.watchFaceXml = x;
     };
 
     gearWatch.getWatchXml = function() {
-        return watchFaceXml;
+        return gearWatch.watchFaceXml;
     };
 
     gearWatch.setIcuFormatter = function(formatter) {

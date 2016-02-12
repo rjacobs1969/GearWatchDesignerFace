@@ -4,7 +4,7 @@
 
 (function( gearWatchDesignerSettings, $, undefined ) {
 
-    gearWatchDesignerSettings.debug = false;
+    gearWatchDesignerSettings.debug = true;
     gearWatchDesignerSettings.language = "en";
     gearWatchDesignerSettings.framesPerSecond = 15;
     gearWatchDesignerSettings.roundOverlay = false;
