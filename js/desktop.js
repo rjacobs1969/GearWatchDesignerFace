@@ -34,6 +34,7 @@ function touchOrClickEvent()
             //console.log('must load jquery');
             loader.add("js/jquery-1.8.3.min.js"); // jQuery is not loaded
         }
+        loader.add("js/b64.js");
         loader.add("js/jszip.js");
         loader.add("js/jszip-utils.js");
         loader.add("js/FileSaver.js");

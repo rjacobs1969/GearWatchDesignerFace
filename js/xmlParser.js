@@ -5,7 +5,7 @@
 
 var fontData = [];
 var fontFamily = [];
-var imageIndex = {};
+//var imageIndex = {};
 var fontIndex = {};
 
 
@@ -26,6 +26,11 @@ var watchFaceXml = '';
     var timer = null;
     var icuFormatter = null;
 
+    gearWatch.bitmapFontsData = [];
+    gearWatch.bitmapFontsIndex = {};
+    gearWatch.bitmapFontsRenders = [];
+    gearWatch.bitmapFontsRenderIndex = {};
+    gearWatch.imageIndex = {};
     gearWatch.imageData = [];
 
     gearWatch.doRenderWatch = function() {
@@ -58,11 +63,39 @@ var watchFaceXml = '';
                     }
                 }
             }
-            gearWatch.startTimer();
         }
+        createBitmapFonts(xmlDoc);
+        gearWatch.startTimer();
 
         return mainDomElement;
     };
+
+    function createBitmapFonts(xmlDoc) {
+        var fontsNode = xmlDoc.getElementsByTagName('bitmap-fonts');
+        if (fontsNode.length>0) {
+            fontsNode = fontsNode[0];
+            var fonts = fontsNode.getElementsByTagName("bitmap-font");
+            for (var fontnr = 0; fontnr < fonts.length; fontnr++) {
+                var font = fonts[fontnr];
+                var fontName = font.getAttribute('name');
+                var fontRenderIndex = gearWatch.bitmapFontsRenderIndex[fontName];
+                var render = gearWatch.bitmapFontsRenders[fontRenderIndex];
+                var characters = font.getElementsByTagName("character");
+                for (var charnr = 0; charnr < characters.length; charnr++) {
+                    var character = characters[charnr];
+                    var letter = character.getAttribute('name');
+                    var width = character.getAttribute('width');
+                    var height = character.getAttribute('height');
+                    var file = character.getAttribute('filepath');
+                    var filename = 'fonts/' + fontName + '/' + file;
+                    var dataUri = getBitFontDataUri(filename);
+                    var letterAscii = letter.charCodeAt(0);
+                    var key = 'L_' + letterAscii;
+                    render[key] = '<img height="' + height + '" width="' + width + '" src="' + dataUri + '">';
+                }
+            }
+        }
+    }
 
     gearWatch.startTimer = function() {
         var intervalTime = 500 / gearWatchDesignerSettings.framesPerSecond;
@@ -162,7 +195,8 @@ var watchFaceXml = '';
         textPartElement.style.transform = 'translateY(-50%)';
         textPartElement.style.overflow = 'hidden';
         textPartElement.style.whiteSpace = 'nowrap';
-
+        textPartElement.setAttribute('data-fontType',element.getAttribute('data-fontType'));
+        textPartElement.setAttribute('data-fontFamily',element.getAttribute('data-fontFamily'));
         if (textNode) {
             var align = textNode.getAttribute('align');
             if (align) {
@@ -199,12 +233,33 @@ var watchFaceXml = '';
         var font = getFontNode(part);
         if (font) {
             var fontName  = font.getAttribute('filename');
-            var fontIdx = getFontIndex('fonts/'+fontName+'.ttf');
-            domElement.style.fontFamily = fontFamily[fontIdx];
-            domElement.style.fontSize = font.getAttribute('size');
-            customFontCount++;
+            if (fontName) {
+                var fontIdx = getFontIndex('fonts/' + fontName + '.ttf');
+                domElement.style.fontFamily = fontFamily[fontIdx];
+                domElement.style.fontSize = font.getAttribute('size');
+                customFontCount++;
+                domElement.setAttribute('data-fontType','ttf');
+                domElement.setAttribute('data-fontFamiliy',fontName);
+            } else {
+                var family = font.getAttribute('family');
+                if (family) {
+                    domElement.setAttribute('data-fontType', 'bmf');
+                    domElement.setAttribute('data-fontFamiliy', family);
+                }else{
+                    var sizeNode = getNodeByName(part, 'style');
+                    if (sizeNode) {
+                        domElement.style.fontFamily = sizeNode.getAttribute('typeFace');
+                        domElement.style.fontSize = sizeNode.getAttribute('size');
+                        domElement.style.fontWeight = font.getAttribute('weight');
+                        domElement.setAttribute('data-fontType','ttf');
+                        domElement.setAttribute('data-fontFamiliy', 'TizenSans');
+                    }
+                }
+            }
             return true;
         } else {
+            domElement.setAttribute('data-fontType','ttf');
+            domElement.setAttribute('data-fontFamiliy','buildin');
             domElement.style.fontFamily = 'TizenSans';
             domElement.style.fontSize = '24px';
 
@@ -269,10 +324,20 @@ var watchFaceXml = '';
 
     function renderAll() {
         for (toUpdate = 0; toUpdate<dynamicElements.length; toUpdate++) {
-            elementToRender = dynamicElements[toUpdate];
+            var elementToRender = dynamicElements[toUpdate];
             switch (elementToRender.type) {
                 case 'hand': renderHand(elementToRender);   break;
-                case 'text': renderText(elementToRender);   break;
+                case 'text':
+                    var renderElement = document.getElementById(elementToRender.objectId);
+                    var fontRenderType = renderElement.getAttribute('data-fontType');
+                    //console.log(elementToRender.objectId);
+                    if (fontRenderType=='ttf') {
+                        renderTextNormal(elementToRender);   break;
+                    } else {
+                        renderText(elementToRender);
+                    }
+                    break;
+
             }
 
         }
@@ -316,13 +381,44 @@ var watchFaceXml = '';
         }
     }
 
-    function renderText(that) {
+    function renderTextNormal(that) {
         var value = valueFromSource(that.dataSource, that.dataFormatter);
         var renderElement = document.getElementById(that.objectId);
         if (renderElement) {
             renderElement.innerHTML = value;
         }
     }
+
+    function renderText(that) {
+        var value = valueFromSource(that.dataSource, that.dataFormatter);
+        var renderElement = document.getElementById(that.objectId);
+        var htmlValue = '';
+        var renderer = gearWatch.bitmapFontsRenders[1];
+        for (var n=0; n < value.length; n++) {
+            var char = value.charCodeAt(n);
+            var rendered = renderer['L_'+char];
+            if (rendered) {
+                htmlValue = htmlValue + rendered;
+            }
+        }
+        if (renderElement) {
+            renderElement.innerHTML = htmlValue;
+        }
+    }
+
+    gearWatch.fontRenderer = function(name)  {
+        this.name = name;
+        //this.renderText = function(text) {
+          //  console.log(text);
+            //for (var n; n<text.length; n++) {
+            //    var char = text.charCodeAt(n);
+             //   var key = 'L_'+char;
+                //if(this[key]) {
+               //     console.log(n + ' = '+ char);
+                //}
+            //}
+        //};
+    };
 
     function DynamicText(data, obId) {
         this.type = 'text';
@@ -408,8 +504,13 @@ var watchFaceXml = '';
     }
 
     function getDataUri(name){
-        var index = imageIndex[name];
+        var index = gearWatch.imageIndex[name];
         return gearWatch.imageData[index];
+    }
+
+    function getBitFontDataUri(name){
+        var index = gearWatch.bitmapFontsIndex[name];
+        return gearWatch.bitmapFontsData[index];
     }
 
     function getFontIndex(name) {

@@ -74,39 +74,65 @@
                 name = name.substr(4);
                 if (name=='watchface.xml') {    //found the watch design
                     watchFaceXml = zipEntry.asText();
-                    //if (debugOutput) {
-                    //    $("#xmlDebug").html('<H1>XML:</H1>'+htmlEntities(watchFaceXml));
-                    //}
+                    console.log(watchFaceXml);
                 }
-
-                if (name.substr(0, 6)== 'fonts/' && name.length > 6) { // found a font
+                var fileExtention = getFileExtention(name);
+                if (name.substr(0, 6)== 'fonts/' && name.length > 6 && name.substr(name.length - 1) != '/') { // found a font
                     var fontdta = zipEntry.asUint8Array();
                     var fontFam = gearWatch.getFontInfo(fontdta);
-                    var dataIndex = fontData.length;
-                    var b64string = StringView.bytesToBase64(fontdta);
-                    fontData.push("data:application/x-font-ttf;base64," + b64string);
-                    fontFamily.push(fontFam);
-                    fontIndex[name] = dataIndex;
+                    var b64string = base64js.fromByteArray(fontdta);
+                    var mime = mimeTypeByFileExt(fileExtention);
+                    if (fileExtention == '.png' || fileExtention == '.jpg') {
+                        var dataIndex = gearWatch.bitmapFontsData.length;
+                        var fontName = getBitmapFontNameFromFilePath(name);
+                        gearWatch.bitmapFontsData.push("data:" + mime + ";base64," + b64string);
+                        gearWatch.bitmapFontsIndex[name] = dataIndex;
+                        var dataIndex = gearWatch.bitmapFontsRenders.length;
+                        if (!gearWatch.bitmapFontsRenderIndex[fontName]) {
+                            var fontRender = new gearWatch.fontRenderer(fontName);
+                            var dataIndex = gearWatch.bitmapFontsRenders.length;
+                            gearWatch.bitmapFontsRenders.push(fontRender);
+                            gearWatch.bitmapFontsRenderIndex[fontName] = dataIndex;
+                        }
+                    } else {
+                        var dataIndex = fontData.length;
+                        fontData.push("data:" + mime + ";base64," + b64string);
+                        fontFamily.push(fontFam);
+                        fontIndex[name] = dataIndex;
+                    }
                 }
-                if (name.substr(name.length - 4) == '.png') {
+                if (fileExtention == '.png' || fileExtention == '.jpg') {
                     var imgdta = zipEntry.asUint8Array();
                     var dataIndex = gearWatch.imageData.length;
-                    var b64string = StringView.bytesToBase64(imgdta);
-                    gearWatch.imageData.push("data:image/png;base64," + b64string);
-                    imageIndex[name] = dataIndex;
+                    var b64string = base64js.fromByteArray(imgdta);
+                    var mime = mimeTypeByFileExt(fileExtention);
+                    gearWatch.imageData.push("data:"+mime+";base64," + b64string);
+                    gearWatch.imageIndex[name] = dataIndex;
                     // console.log(name);
-                }
-                if (name.substr(name.length - 4) == '.jpg') {
-                    var imgdta = zipEntry.asUint8Array();
-                    var dataIndex = gearWatch.imageData.length;
-                    var b64string = StringView.bytesToBase64(imgdta);
-                    gearWatch.imageData.push("data:image/jpg;base64," + b64string);
-                    imageIndex[name] = dataIndex;
                 }
             }
         });
     }
 
+    function getBitmapFontNameFromFilePath(filepath) {
+        var fontsdir = filepath.substr(6);
+
+        return fontsdir.substr(0, fontsdir.indexOf('/'));
+    }
+
+    function getFileExtention(filename) {
+        return filename.substr(filename.lastIndexOf('.'));
+    }
+
+    function mimeTypeByFileExt(fileExtention) {
+        switch(fileExtention) {
+            case '.png': return 'image/png';
+            case '.jpg': return 'image/jpg';
+            case '.ttf': return 'application/x-font-ttf';
+        }
+
+        return 'application/octet-stream';
+    }
 
     ////Private Property
     //var isHot = true;
