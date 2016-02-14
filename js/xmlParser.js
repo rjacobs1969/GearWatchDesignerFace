@@ -8,13 +8,15 @@
     var parser = new DOMParser();
     var dynamicElements = [];
     var customFontCount = 0;
-    var debugOutput = gearWatchDesignerSettings.debug;
     var timer = null;
+    var animTimer = null;
     var icuFormatter = null;
     var watchFace;
     var watchFaceName;
     var watchFaceWidth;
     var watchFaceHeight;
+    var imageSets = [];
+    var hasAmbient = false;
 
     gearWatch.fontData = [];
     gearWatch.fontFamily = [];
@@ -28,6 +30,31 @@
     gearWatch.gwd = null;
     gearWatch.watchFaceXml = '';
 
+    gearWatch.reset = function() {
+        showHideAmbient(false);
+        gearWatch.stopTimer();
+        gearWatch.fontData = [];
+        gearWatch.fontFamily = [];
+        gearWatch.fontIndex = {};
+        gearWatch.bitmapFontsData = [];
+        gearWatch.bitmapFontsIndex = {};
+        gearWatch.bitmapFontsRenders = [];
+        gearWatch.bitmapFontsRenderIndex = {};
+        gearWatch.imageIndex = {};
+        gearWatch.imageData = [];
+        gearWatch.gwd = null;
+        gearWatch.watchFaceXml = '';
+        animTimer = null;
+        hasAmbient = false;
+        parser = new DOMParser();
+        dynamicElements = [];
+        customFontCount = 0;
+        timer = null;
+        imageSets = [];
+        document.getElementById('watchActive').innerHTML = '';
+        document.getElementById('watchAmbient').innerHTML = '';
+    };
+
     gearWatch.doRenderWatch = function() {
         gearWatch.gwd = null;
         loadFonts();
@@ -37,32 +64,86 @@
         watchFaceWidth = watchFace[0].getAttribute('width');
         watchFaceHeight = watchFace[0].getAttribute('height');
 
-        groups = xmlDoc.getElementsByTagName('groups');
-        for (mainGroupNumber = 0; mainGroupNumber < groups.length; mainGroupNumber++) {
-            mainGroup = groups[mainGroupNumber];
-            mainElementId = getMainElementId(mainGroup);
-            mainDomElement = document.getElementById(mainElementId);
-            groupsInMain = mainGroup.getElementsByTagName("group");
-            for (groupNumber = 0; groupNumber < groupsInMain.length; groupNumber++) {
-                group = groupsInMain[groupNumber];
-                domElement = createDomElement(group);
+        var groups = xmlDoc.getElementsByTagName('groups');
+        for (var mainGroupNumber = 0; mainGroupNumber < groups.length; mainGroupNumber++) {
+            var mainGroup = groups[mainGroupNumber];
+            var mainElementId = getMainElementId(mainGroup);
+            var mainDomElement = document.getElementById(mainElementId);
+            var groupsInMain = mainGroup.getElementsByTagName("group");
+            for (var groupNumber = 0; groupNumber < groupsInMain.length; groupNumber++) {
+                var group = groupsInMain[groupNumber];
+                var domElement = createDomElement(group);
                 mainDomElement.appendChild(domElement);
-                if (debugOutput) { console.log(mainGroupNumber + '/' + groupNumber + ':' + group.getAttribute('name'));}
-                partsInGroup = group.getElementsByTagName("part");
-                for (partsNumber = 0; partsNumber < partsInGroup.length; partsNumber++) {
-                    part = partsInGroup[partsNumber];
-                    domPart = createDomPart(part);
+                logIt(mainGroupNumber + '/' + groupNumber + ':' + group.getAttribute('name'));
+                var partsInGroup = group.getElementsByTagName("part");
+                for (var partsNumber = 0; partsNumber < partsInGroup.length; partsNumber++) {
+                    var part = partsInGroup[partsNumber];
+                    var domPart = createDomPart(part);
                     if (domPart != null) {
                         domElement.appendChild(domPart);
+                        var imageSetIndex = createImageSet(part);
                     }
                 }
+                setAction(group, domPart, imageSetIndex);
             }
         }
+        showHideAmbient(hasAmbient);
         createBitmapFonts(xmlDoc);
         gearWatch.startTimer();
 
         return mainDomElement;
     };
+
+    function showHideAmbient(show) {
+        document.getElementById('gear2').style.visibility = (show) ? 'visible':'hidden';
+    }
+
+    function createImageSet(part){
+        var setIndex = null;
+        setsInPart = part.getElementsByTagName("image-set");
+        if (setsInPart) {
+            var images = [];
+            setsInPar =  setsInPart[0];
+            if (setsInPar) {
+                var repeat = (setsInPar.hasAttribute('repeat')) ? setsInPar.getAttribute('repeat') : null;
+                var imagesInPart = setsInPar.getElementsByTagName("image");
+                for (var imageNr = 0; imageNr < imagesInPart.length; imageNr++) {
+                    var image = imagesInPart[imageNr];
+                    images.push(image.textContent);
+                }
+                var imageSet = new ImageSet(images, repeat);
+                setIndex = addImageSet(imageSet);
+                console.log('added set ' + setIndex);
+                if (setsInPar.hasAttribute('delay')) { // animation
+                    var targetId = getPartMeta(part, 'id');
+                    var delay = setsInPar.getAttribute('delay');
+                    animTimer = setInterval(gearWatch.animate.bind(null,targetId, setIndex),delay);
+                }
+            }
+
+        }
+
+        return setIndex;
+    }
+
+    gearWatch.animate = function (targetId, index){
+        gearWatch.cycleImageSet(index, 'anim', targetId);
+    };
+
+    function setAction(group, domPart, setId){
+        // actions: <action on_event="tap" target_part_id="Background0" type="image-set-show-next"/>
+        var actionsInGroup = group.getElementsByTagName("action");
+        if (actionsInGroup) {
+            for (var actionNumber = 0; actionNumber < actionsInGroup.length; actionNumber++) {
+                var action = actionsInGroup[actionNumber];
+                var event = actionContext.platformAction(action.getAttribute('on_event'));
+                var target = action.getAttribute('target_part_id');
+                var type = action.getAttribute('type');
+                domPart.setAttribute(event, "gearWatch.cycleImageSet("+setId+", '"+type+"', '"+target+"')");
+                domPart.style.pointerEvents ='all'; //make it clickable
+            }
+        }
+    }
 
     function createBitmapFonts(xmlDoc) {
         var fontsNode = xmlDoc.getElementsByTagName('bitmap-fonts');
@@ -98,6 +179,9 @@
 
     gearWatch.stopTimer = function() {
         clearInterval(timer);
+        if (animTimer!= null) {
+            clearInterval(animTimer);
+        }
     };
 
 
@@ -126,7 +210,7 @@
         imageDomElement.style.height = part.getAttribute('height');
         imageDomElement.style.left = part.getAttribute('x');
         imageDomElement.style.top = part.getAttribute('y');
-
+        imageDomElement.style.pointerEvents = 'none';
         var renderObject = createRender(imagePartType, part, imagePartId);
         if (renderObject) {
             if (renderObject.smooth == true) {
@@ -150,11 +234,13 @@
         var textDomElement = document.createElement('DIV');
         textDomElement.setAttribute('id', textPartId);
         textDomElement.style.position = 'absolute';
+        //textDomElement.style.verticalAlign = 'middle';
+        // textDomElement.style.transform = 'translateY(-50%)';
         textDomElement.style.width = part.getAttribute('width');
         textDomElement.style.height = part.getAttribute('height');
         textDomElement.style.left = part.getAttribute('x');
         textDomElement.style.top = part.getAttribute('y');
-
+        textDomElement.style.pointerEvents = 'none';
         loadFont(part, textDomElement);
         setColorFromPart(part, textDomElement);
         setTextPart(part, textDomElement, textPartId, textPartType);
@@ -187,8 +273,10 @@
         textPartElement.style.position = 'relative';
         textPartElement.style.top = '50%';
         textPartElement.style.transform = 'translateY(-50%)';
+        textPartElement.style.verticalAlign = 'middle';
         textPartElement.style.overflow = 'hidden';
         textPartElement.style.whiteSpace = 'nowrap';
+        textPartElement.style.pointerEvents = 'none';
         textPartElement.setAttribute('data-fontType',element.getAttribute('data-fontType'));
         textPartElement.setAttribute('data-fontFamily',element.getAttribute('data-fontFamily'));
         if (textNode) {
@@ -276,6 +364,7 @@
         groupDomElement.style.top = group.getAttribute('y') + 'px';
         groupDomElement.style.width = group.getAttribute('width') + 'px';
         groupDomElement.style.height = group.getAttribute('height') + 'px';
+        groupDomElement.style.pointerEvents = 'none';
 
         return groupDomElement;
     }
@@ -285,7 +374,7 @@
 
     // todo move to desktop.js
     // todo make version in watch.js
-    function valueFromSource(source, icu) {
+    function valueFromSource(source, icu, append) {
         var  d = new Date();
         var  miliSeconds = d.getMilliseconds();
         var  seconds = d.getSeconds();
@@ -308,6 +397,14 @@
                 return d.getDay();
             case 'icu':
                 return icu(d);
+            case 'battery.percent':
+                return actionContext.battery()+append;
+            case 'pedometer.step':
+                return actionContext.steps()+append;
+            case 'heartrate.recent':
+                return actionContext.heart()+append;
+            case 'static':
+                return append;
             default: return 0;
         }
     }
@@ -322,30 +419,24 @@
             switch (elementToRender.type) {
                 case 'hand': renderHand(elementToRender);   break;
                 case 'text':
+
                     var renderElement = document.getElementById(elementToRender.objectId);
                     var fontRenderType = renderElement.getAttribute('data-fontType');
-                    //console.log(elementToRender.objectId);
                     if (fontRenderType=='ttf') {
                         renderTextNormal(elementToRender);   break;
                     } else {
                         renderText(elementToRender);
                     }
                     break;
+                case 'sysinfo':
+                    console.log(elementToRender);
 
             }
 
         }
-        animAll();
         conditionAll();
     }
 
-    var animTick = true;
-    function animAll() {
-        animTick = !animTick;
-        if (animTick) {
-            // todo : process animations
-        }
-    }
 
     function conditionAll()
     {
@@ -357,6 +448,7 @@
         switch (metaType) {
             case 'hands':           ob = new Hands(data, obId);         break;
             case 'digitalclock':    ob = new DynamicText(data, obId);   break;
+            case 'sysinfo':         ob = new DynamicSystemInfoText(data, obId);   break;
             case 'background':
             case 'static':
             default:
@@ -376,7 +468,7 @@
     }
 
     function renderTextNormal(that) {
-        var value = valueFromSource(that.dataSource, that.dataFormatter);
+        var value = valueFromSource(that.dataSource, that.dataFormatter, that.dataText);
         var renderElement = document.getElementById(that.objectId);
         if (renderElement) {
             renderElement.innerHTML = value;
@@ -384,7 +476,7 @@
     }
 
     function renderText(that) {
-        var value = valueFromSource(that.dataSource, that.dataFormatter);
+        var value = valueFromSource(that.dataSource, that.dataFormatter, that.dataText);
         var renderElement = document.getElementById(that.objectId);
         var htmlValue = '';
         var renderer = gearWatch.bitmapFontsRenders[1];
@@ -400,29 +492,29 @@
         }
     }
 
-    gearWatch.fontRenderer = function(name)  {
-        this.name = name;
-        //this.renderText = function(text) {
-          //  console.log(text);
-            //for (var n; n<text.length; n++) {
-            //    var char = text.charCodeAt(n);
-             //   var key = 'L_'+char;
-                //if(this[key]) {
-               //     console.log(n + ' = '+ char);
-                //}
-            //}
-        //};
+    gearWatch.kk = function(){
+        console.log(dynamicElements);
     };
+
+    function DynamicSystemInfoText(data, obId){
+        var format = getNodeByName(data, 'format');
+        this.type = 'text';
+        this.dataSource = format.getAttribute('source');
+        this.dataText = data.textContent;
+        this.dataFormatter = null;
+        this.objectId = obId;
+    }
 
     function DynamicText(data, obId) {
         this.type = 'text';
+        this.dataText = '';
         this.dataSource = 'icu';
         this.dataFormatter = icuFormatter.dateFormatter({raw: data.childNodes[0].nodeValue});
         this.objectId = obId;
     }
 
     function Hands(data, obId) {
-        var rotations = part.getElementsByTagName('rotation');
+        var rotations = data.getElementsByTagName('rotation');
         var rotation = rotations[0];
         var angleEnd = Number(rotation.getAttribute('end_angle'));
         var angleStart = Number(rotation.getAttribute('start_angle'));
@@ -439,6 +531,54 @@
         this.degreesPerValueUnit = angleRange/valueRange;
         this.smooth = false;//(smoothSeconds == 'sweep60s');
     }
+
+    function ImageSet(images, repeat) {
+        this.images = images;
+        this.currentPos = 0;
+        this.maxPos = images.length-1;
+        this.repeat = repeat;
+    }
+
+    function addImageSet(imageSet) {
+        var index = imageSets.length;
+        imageSets.push(imageSet);
+        return index;
+    }
+
+    gearWatch.cycleImageSet =  function (index, action, target) {
+        var set = imageSets[index];
+        switch (action) {
+            case 'image-set-show-next':
+                set.currentPos = (set.currentPos<set.maxPos) ? set.currentPos+1 : 0;
+                break;
+            case 'anim':
+                set.currentPos++;
+                if (set.currentPos>set.maxPos) {
+                    set.currentPos = (set.repeat == 1) ? 0:set.maxPos;
+                }
+                break;
+            case 'image-set-show-previous':
+                set.currentPos = (set.currentPos>0) ? set.currentPos-1 : set.maxPos;
+                break;
+            case 'image-set-show-first':
+                set.currentPos = 0;
+                break;
+            case 'image-set-show-last':
+                set.currentPos = set.maxPos;
+                break;
+            case 'launch':
+                alert('Launching app impossible in browser version');
+                break;
+            default:
+                alert('set cycle action "'+action+'" unknown');
+                break;
+        }
+        var image = set.images[set.currentPos];
+        var element = document.getElementById(target);
+        if (element) {
+            element.setAttribute('src', getDataUri(image, "data:image/png;base64,"));
+        }
+    };
 
     /*****************************************************************/
     /**                 DEBUG Helpers
@@ -458,9 +598,18 @@
         if (content!=null) {
             setRenderObject(textPartType, content, textPartId);
             return '';
+        }else{
+            content = getNodeByName(textNode, 'format');
+            if (content!=null) {
+                setRenderObject('sysinfo', textNode, textPartId);
+                return '';
+            }else{
+                console.log(textNode.textContent);
+                content = getNodeByName(textNode, 'text');
+                console.log(content);
+                return textNode.textContent;
+            }
         }
-
-        return content;
     }
 
     function setColorFromPart(part, element) {
@@ -470,7 +619,12 @@
             var red = color.getAttribute('r');
             var green = color.getAttribute('g');
             var blue = color.getAttribute('b');
-            element.style.color = 'rgba(' + red + ', ' + green + ', ' + blue + ', ' + alfa + ')';
+            if (red) {
+                element.style.color = 'rgba(' + red + ', ' + green + ', ' + blue + ', ' + alfa + ')';
+            } else {
+                element.style.opacity = alfa;//only alfa info
+            }
+
         }
     }
 
@@ -512,6 +666,7 @@
     }
 
     function getMainElementId(node) {
+        hasAmbient = (node.getAttribute('type') == 'ambient' );
         return (node.getAttribute('type') == 'ambient' ) ? 'watchAmbient' : 'watchActive';
     }
 
@@ -546,6 +701,10 @@
         icuFormatter = formatter;
     };
 
+    gearWatch.fontRenderer = function(name) {
+        this.name = name;
+    };
+
     gearWatch.getFontInfo = function(fdata) {
         //console.log(fdata);
         var numberOfTables = 256*fdata[4] + fdata[5];
@@ -577,6 +736,8 @@
         }
         return 'TizenSans';
     };
+
+
 
 }( window.gearWatch = window.gearWatch || {}, jQuery ));
 

@@ -59,4 +59,24 @@ function touchOrClickEvent()
     loader.load();
 }( window.loader = window.loader || {}));
 
-
+(function(actionContext, $, undefined ) {
+    actionContext.platformAction = function(action) {
+        switch (action) {
+            case 'tap': return 'onclick';
+        }
+    };
+    actionContext.battery = function(){
+        return document.getElementById('bat').value;
+    };
+    actionContext.steps = function(){
+        return document.getElementById('step').value;
+    };
+    actionContext.heart = function(){
+        return document.getElementById('heart').value;
+    };
+    actionContext.zoom = function(zoom){
+        zoom = zoom/100;
+        document.getElementById('watchEmulator').style.transform = "scale("+zoom+")";
+        //document.getElementById('gear2').style.transform = "scale("+zoom+")";
+    };
+}( window.actionContext = window.actionContext || {}));

@@ -3,14 +3,30 @@
     <link rel="stylesheet" href="css/desktop.css">
 </head>
 <body>
-<div id="watchActive"></div>
-<div id="watchAmbient"></div>
 
+<div id="watchEmulator">
+<div id="gear1">
+    <img src="img/gear.png" class="gearOverlay">
+    <div class="gearOverlayBackground"></div>
+    <div id="watchActive"></div>
+</div>
+<div id="gear2">
+    <div id="ambientText">AMBIENT</div>
+    <img src="img/gear.png" class="gearOverlay">
+    <div class="gearOverlayBackground"></div>
+    <div id="watchAmbient"></div>
+</div>
+</div>
 <script src="js/desktop.js"></script>
 
-<input type="file" id="file" name="file"/><br><br>
-<input type="button" value="remote back to school watch" onclick="hhh()">
-<input type="button" value="remote B50 watch" onclick="hhh2()">
+<div id="controls">
+    <input onclick="gearWatch.reset();" type="file" id="file" name="file"/><br><br><br>
+    Z: <input type="range" value="100" min="10" max="200" onchange="actionContext.zoom(this.value);"><br>
+    B: <input type="range" value="50" min="0" max="100" id="bat"> %<br>
+    S: <input type="range" value="1500" min="0" max="99999" id="step"> steps<br>
+    H: <input type="range" value="72" min="50" max="200" id="heart"> bpm
+</div>
+
 
 <div id="xmlDebug"></div>
 <script>

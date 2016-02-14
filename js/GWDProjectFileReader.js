@@ -135,26 +135,4 @@
         return 'application/octet-stream';
     }
 
-    ////Private Property
-    //var isHot = true;
-    //
-    ////Public Property
-    //gearWatch.ingredient = "Bacon Strips";
-    //
-    ////Public Method
-    //gearWatch.fry = function() {
-    //    var oliveOil;
-    //
-    //    addItem( "\t\n Butter \n\t" );
-    //    addItem( oliveOil );
-    //    console.log( "Frying " + gearWatch.ingredient );
-    //};
-    //
-    ////Private Method
-    //function addItem( item ) {
-    //    if ( item !== undefined ) {
-    //        console.log( "Adding " + $.trim(item) );
-    //    }
-    //}
-
 }( window.gearWatchDesignerProjectFileReader = window.gearWatchDesignerProjectFileReader || {}, jQuery ));

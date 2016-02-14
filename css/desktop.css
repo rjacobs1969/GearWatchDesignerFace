@@ -13,6 +13,8 @@ body {
 
 }
 
+
+
 #file {
     position: absolute;
     top: 0;
@@ -42,19 +44,82 @@ body {
     height: 100%;
 }
 
+#watchEmulator {
+    position: absolute;
+    left:     0;
+    top:      50px;
+    width:   1080px;
+}
+
+#gear1 {
+    position: absolute;
+    left:     235px;
+    top:      0;
+    z-index: 100;
+    overflow: hidden;
+    width: 565px;
+    height: 770px;
+}
+
+#controls {
+    position: fixed;
+    left:     20px;
+    top:      20px;
+    z-index:  500;
+}
+
+#ambientText {
+    position: absolute;
+    top: 30px;
+    left: 184px;
+    font-size: 48px;
+    color: red;
+    z-index: 2500;
+}
+
+#gear2 {
+    position: relative;
+    left:     800px;
+    top:      0;
+    z-index: 99;
+    overflow: hidden;
+    width: 565px;
+    height: 770px;
+    visibility: hidden;
+}
+.gearOverlay {
+    z-index: 100;
+    pointer-events: none;
+    position: absolute;
+    width: 563px;
+    height: 769px;
+}
+
+.gearOverlayBackground {
+    z-index: 25;
+    pointer-events: none;
+    position: absolute;
+    width: 560px;
+    height: 765px;
+    top: 2px;
+    left: 2px;
+    background-color: black;
+}
 
 #watchActive {
     position: absolute;
-    left:     10px;
-    top:      50px;
+    left:     108px;
+    top:      208px;
     width:    360px;
     height:   360px;
+    z-index: 50;
 }
 #watchAmbient {
     visibility: visible;
     position: absolute;
-    left:     400px;
-    top:      50px;
+    left:     109px;
+    top:      208px;
     width:    360px;
     height:   360px;
+    z-index: 50;
 }
