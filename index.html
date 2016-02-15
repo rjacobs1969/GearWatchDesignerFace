@@ -21,7 +21,7 @@
 
 <div id="controls">
     <input onclick="gearWatch.reset();" type="file" id="file" name="file"/><br><br><br>
-    Z: <input type="range" value="100" min="10" max="200" onchange="actionContext.zoom(this.value);"><br>
+    Z: <input type="range" value="100" min="10" max="200" onchange="actionContext.zoom(this.value);" oninput="actionContext.zoom(this.value);"><br>
     B: <input type="range" value="50" min="0" max="100" id="bat"> %<br>
     S: <input type="range" value="1500" min="0" max="99999" id="step"> steps<br>
     H: <input type="range" value="72" min="50" max="200" id="heart"> bpm
