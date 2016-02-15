@@ -49,6 +49,7 @@ body {
     left:     0;
     top:      50px;
     width:   1080px;
+    transition: 1s;
 }
 
 #gear1 {
